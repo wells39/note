@@ -1,3 +1,5 @@
+##https://github.com/gdbinit/Gdbinit/blob/master/gdbinit
+
 #/root/.gdbinit
 set height 0
 #symbol-file   --- load symbol form spec file
