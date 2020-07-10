@@ -369,31 +369,21 @@ update-alternatives --config gcc
 win10
 
 1、添加端口转发
-
 netsh interface portproxy add v4tov4 listenport=4000 listenaddress=127.0.0.1 connectport=4000 connectaddress=172.31.217.198
-
 2、删除端口转发
-
- netsh interface portproxy del v4tov4listenport=4000 listenaddress=127.0.0.1
-
+netsh interface portproxy del v4tov4listenport=4000 listenaddress=127.0.0.1
 3、查看已存在的端口映射
-
 netsh interface portproxy show v4tov4
-
 可以通过命令 netstat -ano|find 4000 查看端口是否已在监听
-
 telnet 127.0.0.1 4000 测试端口是否连通
+4、git-bash下使用telnet交互式命令需要增加winpty前缀
+echo "alias docker='winpty docker'" >> ~/.bash_profile
 
 suse12
-
 systemctl stop SuSEfirewall2.service
-
 systemctl disable SuSEfirewall2.service
-
 修改sshd为 root 登录
-
 systemctl enable sshd.service //开机启动sshd
-
 ====
 
 ![计算机生成了可选文字: 拢 已 经 懵 好 啦 ， 还 疋 修 改 注 册 表 方 式 。  输 入 regedit ， 打 开 注 册 表 聳 辑 器  2 1 夜 冫 欠 展 于 FH KEY CURRENT_LlSERNSOftwareXM lcrosoftÅOfficeÅ15.OÅOneNOteXOptionsXOthero  」 在 右 窗 囗 右 击 新 建 DWORD(32-Üfä(D)" 命 名 力 ： ScreenChppingShortcutKey"c  4 双 击 新 建 值 ， 修 改 为 41 ， 表 示 将 Onenote 的 屏 截 图 的 快 睫 改 为 ： Win + A （ 以 此 类 挂 42 为 B  43 为 C 等 等 ）  5 ． 兀 成 以 后 ， 重 新 后 动 计 算 机 。  / / 我 尝 讠 式 了 上 述 方 法 没 有 用 。  目 前 罪 近 win 周 围 也 就 z 没 有 热 谖 占 用 了  DWORD 阝 2 位 〕 值  數 值 名 称 （ N ， ：  ScreenCllpplngShortcutKey  數 直 据 (V) ：  @十六迸制（H，  O 十 迸 制 （ [ ))  所 以 我 的 热 设 置 力 了 7 键 。  这 里 因 为 是 16 进 制 ， 所 以 改 砹 了 5A ， 因 为 41 对 应 字 母 A ， 所 以 字 母 Z 对 应 的 是 5A 。  俣 存 后 重 后 圭 脑 丨 芩 来 以 为 win + Z 可 以 实 现 截 图 发 现 没 有 用  亻 日 看 到 onenote 陡 小 的 截 屏 快 睫 是 win ÷ ， t + 5 我 一 试 了 还 是 ， 殳 有 用  最 后 ÉWln+Shlft+Z  砹 功 了 。 欣 喜 狂 一 一 ]
