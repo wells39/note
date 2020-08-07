@@ -19,14 +19,14 @@
  
 void show_usage(char *comm)
 {
-	fprintf(stderr, "\nUsage:\t%s -f file { address length } [ type [ data ] ]\n"
+	fprintf(stderr, "Usage:\t%s -f file { address length } [ [ data ] type ]\n"
 		"\tfile    : file to check memory\n"
 		"\t          /dev/mem  -- for physics memory address examine\n"
 		"\t          /dev/kmem -- for virtual kernel memory address examine\n"
 		"\taddress : memory address to act upon\n"
 		"\tlength  : memory address length to act upon\n"
-		"\ttype    : access operation type : [b]yte, [h]alfword, [w]ord, [g]giant\n"
-		"\tdata    : data to be written\n\n",
+		"\tdata    : data to be written\n"
+		"\ttype    : access operation type : [b]yte, [h]alfword, [w]ord, [g]giant\n",
 		comm);
 	exit(1);
 }
@@ -242,7 +242,7 @@ void hex_dump(int prefix_type, int rowsize, int groupsize,
 
         switch (prefix_type) {
         case DUMP_PREFIX_ADDRESS:
-            printf("%llx: %s\n", addr + i, linebuf);
+            printf("%.8llx: %s\n", addr + i, linebuf);
             break;
         case DUMP_PREFIX_OFFSET:
             printf("%.8x: %s\n", i, linebuf);
@@ -255,42 +255,49 @@ void hex_dump(int prefix_type, int rowsize, int groupsize,
 }
 
 int main(int argc, char **argv) {
-	int opt;
-    void *map_base, *virt_addr; 
+    void *map_base, *virt_addr, *file = 0; 
 	u_int32_t map_size;
-    int fd = -1;
-	u_int64_t writeval = 0;
-	u_int64_t addr = 0;
+	u_int64_t writeval;
+	u_int64_t addr;
 	u_int32_t length = 0;
-	int access_type = 'w';
 	bool write = false;
 	int pg_offset = 0;
+    int fd = -1;
+	int opt = 0;
+	int pos = 0;
+	char access_type = 'w';
 
     while ((opt = getopt(argc, argv, "f:")) != -1) {
 		switch (opt) {
         case 'f':
-			if((fd = open(optarg, O_RDWR | O_SYNC | O_LARGEFILE)) == -1) FATAL;
-                break;
+			file = optarg;
+            break;
         default:
                 show_usage(argv[0]);
         }
     }
-	if(fd == -1) {
+	if(!file) {
 		fprintf(stderr, "%s: -f option is mandatory!\n", argv[0]);
 		show_usage(argv[0]);
 	}
 
-	addr = strtoull(argv[optind++], 0, 0);
-	length = strtoul(argv[optind++], 0, 0);
+	if(argc > optind)
+		addr = strtoull(argv[optind++], 0, 0);
+	if(argc > optind)
+		length = strtoul(argv[optind++], 0, 0);
+	if(!length) {
+		fprintf(stderr, "%s: address or length is invaild!\n", argv[0]);
+		exit(2);
+	}
 
 	if(argc > optind) {
-		if(argc > optind+1) {
+		if(argc > optind + 1) {
 			writeval = strtoull(argv[optind++], 0, 0);
 			write = true;
 		}
 		access_type = tolower(argv[optind++][0]);
 	}
-
+	if((fd = open(file, write? O_RDWR|O_SYNC|O_LARGEFILE : O_RDONLY|O_LARGEFILE)) == -1) FATAL;
     fflush(stdout);
 
     /*map start addr must align with 4K */
@@ -299,34 +306,42 @@ int main(int argc, char **argv) {
     map_size = pg_offset + length;
     /* Map one page */
 #if (__aarch64__ == 1)
-    map_base = mmap(0, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)addr);
+    map_base = mmap(0, map_size, write? PROT_WRITE|PROT_READ : PROT_READ, MAP_SHARED, fd, (off_t)addr);
 #else
 #define	__USE_LARGEFILE64
     if (addr+length >> 32)
     {
-        map_base = mmap64(0, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, addr);
+        map_base = mmap64(0, map_size, write? PROT_WRITE|PROT_READ : PROT_READ, MAP_SHARED, fd, addr);
     } else
     {
-        map_base = mmap(0, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, addr);
+        map_base = mmap(0, map_size, write? PROT_WRITE|PROT_READ : PROT_READ, MAP_SHARED, fd, addr);
     }
 #endif
-    if(map_base == (void *) -1) FATAL;
-    printf("Memory mapped at address %p.\n", map_base); 
-    fflush(stdout);
-    
-    virt_addr = map_base + pg_offset;
+    if(map_base == (void *) -1) {
+		loff_t result;
+		virt_addr = malloc(length);
+		if(!virt_addr) FATAL;
+		if(length > lseek(fd, 0, SEEK_END) - addr )
+			length = lseek(fd, 0, SEEK_END) - addr;
+		if(lseek(fd, addr, SEEK_SET) < 0) FATAL;
+		if(read(fd, virt_addr, length) < 0) FATAL;
+	} else {
+		printf("Memory mapped at address %p.\n", map_base); 
+		fflush(stdout);
+		virt_addr = map_base + pg_offset;
+	}
     switch(access_type) {
 		case 'b':
 			hex_dump(DUMP_PREFIX_ADDRESS, 16, 1, addr, virt_addr, length, true);
 			break;
 		case 'h':
-			hex_dump(DUMP_PREFIX_ADDRESS, 8, 2, addr, virt_addr, length, true);
+			hex_dump(DUMP_PREFIX_ADDRESS, 16, 2, addr, virt_addr, length, true);
 			break;
 		case 'w':
-			hex_dump(DUMP_PREFIX_ADDRESS, 4, 4, addr, virt_addr, length, true);
+			hex_dump(DUMP_PREFIX_ADDRESS, 16, 4, addr, virt_addr, length, true);
 			break;
 		case 'g':
-			hex_dump(DUMP_PREFIX_ADDRESS, 2, 8, addr, virt_addr, length, true);
+			hex_dump(DUMP_PREFIX_ADDRESS, 32, 8, addr, virt_addr, length, true);
 			break;
 		default:
 			fprintf(stderr, "Illegal data type '%c'.\n", access_type);
@@ -359,7 +374,11 @@ int main(int argc, char **argv) {
 		fflush(stdout);
 	}
 	
-	if(munmap(map_base, length) == -1) FATAL;
+	if(map_base != (void *) -1) {
+		if(munmap(map_base, length) == -1) FATAL;
+	} else {
+		free(virt_addr);
+	}
     close(fd);
     return 0;
 }
