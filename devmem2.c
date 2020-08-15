@@ -63,7 +63,7 @@ static inline u_int32_t __get_unaligned_be32(const u_int8_t *p)
 {
     return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
 }
-static inline u_int8_t __get_unaligned_be64(const u_int8_t *p)
+static inline u_int64_t __get_unaligned_be64(const u_int8_t *p)
 {
     return (u_int64_t)__get_unaligned_be32(p) << 32 |
            __get_unaligned_be32(p + 4);
@@ -108,12 +108,12 @@ extern void __bad_unaligned_access_size(void);
     __builtin_choose_expr(sizeof(*(ptr)) == 8, get_unaligned_be64((ptr)),   \
     __bad_unaligned_access_size()))));                  \
     }))
-#if defined(__LITTLE_ENDIAN)
-# define get_unaligned  __get_unaligned_le
-# define put_unaligned  __put_unaligned_le
-#elif defined(__BIG_ENDIAN)
+#if defined(__ARM_BIG_ENDIAN)
 # define get_unaligned  __get_unaligned_be
 # define put_unaligned  __put_unaligned_be
+#else
+# define get_unaligned  __get_unaligned_le
+# define put_unaligned  __put_unaligned_le
 #endif
 enum {
     DUMP_PREFIX_NONE,
