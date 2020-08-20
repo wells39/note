@@ -1,0 +1,451 @@
+diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
+index 436091a..611d60d 100644
+--- a/gcc/config/aarch64/aarch64.c
++++ b/gcc/config/aarch64/aarch64.c
+@@ -13634,7 +13634,10 @@ aarch64_split_dimode_const_store (rtx dst, rtx src)
+ static unsigned HOST_WIDE_INT
+ aarch64_asan_shadow_offset (void)
+ {
+-  return (HOST_WIDE_INT_1 << 36);
++	if (TARGET_ILP32)
++		return (HOST_WIDE_INT_1 << 29);
++	else
++		return (HOST_WIDE_INT_1 << 36);
+ }
+ 
+ static bool
+diff --git a/libsanitizer/asan/asan_mapping.h b/libsanitizer/asan/asan_mapping.h
+index b9fa5f7..d4a08fe 100644
+--- a/libsanitizer/asan/asan_mapping.h
++++ b/libsanitizer/asan/asan_mapping.h
+@@ -158,6 +158,8 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
+ #    else
+ #      define SHADOW_OFFSET kIosShadowOffset32
+ #    endif
++#  elif SANITIZER_AARCH64_ILP32
++#    define SHADOW_OFFSET kDefaultShadowOffset32
+ #  else
+ #    define SHADOW_OFFSET kDefaultShadowOffset32
+ #  endif
+diff --git a/libsanitizer/configure b/libsanitizer/configure
+index 8e0c47e..1aeb3d1 100644
+--- a/libsanitizer/configure
++++ b/libsanitizer/configure
+@@ -2656,6 +2656,7 @@ if test "$srcdir" = "."; then
+   else
+     multi_basedir="$srcdir/$with_multisrctop.."
+   fi
++  multi_basedir="$srcdir/.." # 就是不要上面的那个
+ else
+   multi_basedir="$srcdir/.."
+ fi
+diff --git a/libsanitizer/sanitizer_common/sanitizer_internal_defs.h b/libsanitizer/sanitizer_common/sanitizer_internal_defs.h
+index 676ade1..ba282b7 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_internal_defs.h
++++ b/libsanitizer/sanitizer_common/sanitizer_internal_defs.h
+@@ -63,9 +63,9 @@ typedef signed   long long sptr;  // NOLINT
+ typedef unsigned long uptr;  // NOLINT
+ typedef signed   long sptr;  // NOLINT
+ #endif  // defined(_WIN64)
+-#if defined(__x86_64__)
+-// Since x32 uses ILP32 data model in 64-bit hardware mode, we must use
+-// 64-bit pointer to unwind stack frame.
++#if defined(__x86_64__) || SANITIZER_AARCH64_ILP32
++// Since x32 adn AArch64 ILP32 use ILP32 data model in 64-bit hardware mode, 
++// we must use 64-bit pointer to unwind stack frame.
+ typedef unsigned long long uhwptr;  // NOLINT
+ #else
+ typedef uptr uhwptr;   // NOLINT
+@@ -94,7 +94,7 @@ typedef int pid_t;
+ // like pread and mmap, as opposed to pread64 and mmap64.
+ // FreeBSD, Mac and Linux/x86-64 are special.
+ #if SANITIZER_FREEBSD || SANITIZER_MAC || \
+-  (SANITIZER_LINUX && defined(__x86_64__))
++    (SANITIZER_LINUX && (defined(__x86_64__) || SANITIZER_AARCH64_ILP32))
+ typedef u64 OFF_T;
+ #else
+ typedef uptr OFF_T;
+@@ -104,8 +104,8 @@ typedef u64  OFF64_T;
+ #if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC
+ typedef uptr operator_new_size_type;
+ #else
+-# if defined(__s390__) && !defined(__s390x__)
+-// Special case: 31-bit s390 has unsigned long as size_t.
++# if (defined(__s390__) && !defined(__s390x__)) || SANITIZER_AARCH64_ILP32
++// Special case: 31-bit s390 and AArch64 ILP32 have unsigned long as size_t.
+ typedef unsigned long operator_new_size_type;
+ # else
+ typedef u32 operator_new_size_type;
+diff --git a/libsanitizer/sanitizer_common/sanitizer_linux.cc b/libsanitizer/sanitizer_common/sanitizer_linux.cc
+index 5b6f186..e34838c 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_linux.cc
++++ b/libsanitizer/sanitizer_common/sanitizer_linux.cc
+@@ -93,8 +93,16 @@ const int FUTEX_WAKE = 1;
+ #if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) || \
+     SANITIZER_WORDSIZE == 64)
+ # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
++# define SYSCALL_LL64(val) (val)
+ #else
+ # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
++# if __BYTE_ORDER == __LITTLE_ENDIAN
++#  define SYSCALL_LL64(val) \
++	  (long) ((OFF64_T)(val) & 0xffffffff), (long) ((OFF64_T)(val) >> 32)
++# else
++#  define SYSCALL_LL64(val) \
++	  (long) ((OFF64_T)val >> 32), (long) ((OFF64_T)(val) & 0xffffffff)
++# endif
+ #endif
+ 
+ #if defined(__x86_64__) || SANITIZER_MIPS64
+@@ -174,8 +182,13 @@ uptr internal_write(fd_t fd, const void *buf, uptr count) {
+ 
+ uptr internal_ftruncate(fd_t fd, uptr size) {
+   sptr res;
++# if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 2
++  HANDLE_EINTR(res, (sptr)internal_syscall(SYSCALL(ftruncate64), fd,
++               SYSCALL_LL64((OFF_T)size)));
++# else
+   HANDLE_EINTR(res, (sptr)internal_syscall(SYSCALL(ftruncate), fd,
+                (OFF_T)size));
++# endif
+   return res;
+ }
+ 
+@@ -222,9 +235,12 @@ static void kernel_stat_to_stat(struct kernel_stat *in, struct stat *out) {
+ uptr internal_stat(const char *path, void *buf) {
+ #if SANITIZER_FREEBSD
+   return internal_syscall(SYSCALL(stat), path, buf);
+-#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
++#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 1
+   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path,
+                           (uptr)buf, 0);
++#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 2
++  return internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
++                          (uptr)buf, 0);
+ #elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
+ # if defined(__mips64)
+   // For mips64, stat syscall fills buffer in the format of kernel_stat
+@@ -246,9 +262,12 @@ uptr internal_stat(const char *path, void *buf) {
+ uptr internal_lstat(const char *path, void *buf) {
+ #if SANITIZER_FREEBSD
+   return internal_syscall(SYSCALL(lstat), path, buf);
+-#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
++#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 1
+   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path,
+                          (uptr)buf, AT_SYMLINK_NOFOLLOW);
++#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 2
++  return internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
++                          (uptr)buf, AT_SYMLINK_NOFOLLOW);
+ #elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
+ # if SANITIZER_MIPS64
+   // For mips64, lstat syscall fills buffer in the format of kernel_stat
+@@ -319,9 +338,12 @@ uptr internal_unlink(const char *path) {
+ }
+ 
+ uptr internal_rename(const char *oldpath, const char *newpath) {
+-#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
++#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 1
+   return internal_syscall(SYSCALL(renameat), AT_FDCWD, (uptr)oldpath, AT_FDCWD,
+                           (uptr)newpath);
++#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 2
++  return internal_syscall(SYSCALL(renameat2), AT_FDCWD, (uptr)oldpath, AT_FDCWD,
++                          (uptr)newpath, 0);
+ #else
+   return internal_syscall(SYSCALL(rename), (uptr)oldpath, (uptr)newpath);
+ #endif
+@@ -358,11 +380,7 @@ uptr internal_execve(const char *filename, char *const argv[],
+ // ----------------- sanitizer_common.h
+ bool FileExists(const char *filename) {
+   struct stat st;
+-#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+-  if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, filename, &st, 0))
+-#else
+   if (internal_stat(filename, &st))
+-#endif
+     return false;
+   // Sanity check: filename is a regular file.
+   return S_ISREG(st.st_mode);
+@@ -596,7 +614,15 @@ uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count) {
+ }
+ 
+ uptr internal_lseek(fd_t fd, OFF_T offset, int whence) {
++# if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS == 2
++  int64_t res;
++  int rc = internal_syscall(SYSCALL(llseek), fd,
++                                    (long) (((u64)(offset)) >> 32),
++                                    (long) offset, &res, whence);
++  return rc ? rc : res;
++# else
+   return internal_syscall(SYSCALL(lseek), fd, offset, whence);
++# endif
+ }
+ 
+ #if SANITIZER_LINUX
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform.h b/libsanitizer/sanitizer_common/sanitizer_platform.h
+index 428709d..4d85b73 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform.h
++++ b/libsanitizer/sanitizer_common/sanitizer_platform.h
+@@ -160,6 +160,12 @@
+ # define SANITIZER_PPC64V2 0
+ #endif
+ 
++#if defined(__aarch64__) && defined(__ILP32__)
++# define SANITIZER_AARCH64_ILP32 1
++#else
++# define SANITIZER_AARCH64_ILP32 0
++#endif
++
+ // By default we allow to use SizeClassAllocator64 on 64-bit platform.
+ // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
+ // does not work well and we need to fallback to SizeClassAllocator32.
+@@ -188,10 +194,15 @@
+ 
+ // The AArch64 linux port uses the canonical syscall set as mandated by
+ // the upstream linux community for all new ports. Other ports may still
+-// use legacy syscalls.
++// use legacy syscalls.  Also AArch64 ILP32 uses canonical syscall set
++// 32 bits ports.
+ #ifndef SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+ # if defined(__aarch64__) && SANITIZER_LINUX
+-# define SANITIZER_USES_CANONICAL_LINUX_SYSCALLS 1
++#  if defined(__ILP32__)
++#   define SANITIZER_USES_CANONICAL_LINUX_SYSCALLS 2
++#  else
++#   define SANITIZER_USES_CANONICAL_LINUX_SYSCALLS 1
++#  endif
+ # else
+ # define SANITIZER_USES_CANONICAL_LINUX_SYSCALLS 0
+ # endif
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
+index 31a5e69..14b8ede 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
+@@ -154,7 +154,7 @@ typedef struct user_fpregs elf_fpregset_t;
+ # include <sys/procfs.h>
+ #endif
+ #include <sys/user.h>
+-#include <sys/ustat.h>
++//#include <sys/ustat.h>
+ #include <linux/cyclades.h>
+ #include <linux/if_eql.h>
+ #include <linux/if_plip.h>
+@@ -247,7 +247,7 @@ namespace __sanitizer {
+ #endif // SANITIZER_LINUX || SANITIZER_FREEBSD
+ 
+ #if SANITIZER_LINUX && !SANITIZER_ANDROID
+-  unsigned struct_ustat_sz = sizeof(struct ustat);
++  //unsigned struct_ustat_sz = sizeof(struct ustat);
+   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
+   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
+ #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
+@@ -1134,7 +1134,8 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
+-#if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)
++#if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21) \
++    && !defined(__ILP32__)
+ /* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
+ CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
+ #endif
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+index c139322..e06ea55 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+@@ -69,7 +69,10 @@ namespace __sanitizer {
+ #elif defined(__arm__)
+   const unsigned struct_kernel_stat_sz = 64;
+   const unsigned struct_kernel_stat64_sz = 104;
+-#elif defined(__aarch64__)
++#elif defined(__aarch64__) && defined(__ILP32__)
++  const unsigned struct_kernel_stat_sz = 80;
++  const unsigned struct_kernel_stat64_sz = 104;
++#elif defined(__aarch64__) && defined(__LP64__)
+   const unsigned struct_kernel_stat_sz = 128;
+   const unsigned struct_kernel_stat64_sz = 104;
+ #elif defined(__powerpc__) && !defined(__powerpc64__)
+@@ -496,8 +499,13 @@ namespace __sanitizer {
+   };
+ #else
+   struct __sanitizer_dirent {
++# if SANITIZER_AARCH64_ILP32
++    unsigned long long d_ino;
++    unsigned long long d_off;
++# else
+     uptr d_ino;
+     uptr d_off;
++# endif
+     unsigned short d_reclen;
+     // more fields that we don't care about
+   };
+@@ -527,7 +535,8 @@ namespace __sanitizer {
+ 
+ #if SANITIZER_LINUX || SANITIZER_FREEBSD
+ #if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__)\
+-                   || defined(__mips__)
++                   || defined(__mips__) \
++                   || (defined(__aarch64__) && defined(__ILP32__))
+   typedef unsigned __sanitizer___kernel_uid_t;
+   typedef unsigned __sanitizer___kernel_gid_t;
+ #else
+diff --git a/libsanitizer/sanitizer_common/sanitizer_syscall_linux_aarch64.inc b/libsanitizer/sanitizer_common/sanitizer_syscall_linux_aarch64.inc
+index 64d6322..60fa286 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_syscall_linux_aarch64.inc
++++ b/libsanitizer/sanitizer_common/sanitizer_syscall_linux_aarch64.inc
+@@ -10,10 +10,11 @@
+ //===----------------------------------------------------------------------===//
+ 
+ #define SYSCALL(name) __NR_ ## name
++#define ilp32_u64 long
+ 
+-static uptr __internal_syscall(u64 nr) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0");
++static uptr __internal_syscall(ilp32_u64 nr) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0");
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8)
+@@ -23,9 +24,9 @@ static uptr __internal_syscall(u64 nr) {
+ #define __internal_syscall0(n) \
+   (__internal_syscall)(n)
+ 
+-static uptr __internal_syscall(u64 nr, u64 arg1) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0") = arg1;
++static uptr __internal_syscall(ilp32_u64 nr, ilp32_u64 arg1) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0") = arg1;
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8), "0"(x0)
+@@ -33,12 +34,12 @@ static uptr __internal_syscall(u64 nr, u64 arg1) {
+   return x0;
+ }
+ #define __internal_syscall1(n, a1) \
+-  (__internal_syscall)(n, (u64)(a1))
++  (__internal_syscall)(n, (ilp32_u64)(a1))
+ 
+-static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0") = arg1;
+-  register u64 x1 asm("x1") = arg2;
++static uptr __internal_syscall(ilp32_u64 nr, ilp32_u64 arg1, long arg2) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0") = arg1;
++  register ilp32_u64 x1 asm("x1") = arg2;
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8), "0"(x0), "r"(x1)
+@@ -46,13 +47,13 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
+   return x0;
+ }
+ #define __internal_syscall2(n, a1, a2) \
+-  (__internal_syscall)(n, (u64)(a1), (long)(a2))
++  (__internal_syscall)(n, (ilp32_u64)(a1), (long)(a2))
+ 
+-static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0") = arg1;
+-  register u64 x1 asm("x1") = arg2;
+-  register u64 x2 asm("x2") = arg3;
++static uptr __internal_syscall(ilp32_u64 nr, ilp32_u64 arg1, long arg2, long arg3) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0") = arg1;
++  register ilp32_u64 x1 asm("x1") = arg2;
++  register ilp32_u64 x2 asm("x2") = arg3;
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8), "0"(x0), "r"(x1), "r"(x2)
+@@ -60,15 +61,15 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
+   return x0;
+ }
+ #define __internal_syscall3(n, a1, a2, a3) \
+-  (__internal_syscall)(n, (u64)(a1), (long)(a2), (long)(a3))
++  (__internal_syscall)(n, (ilp32_u64)(a1), (long)(a2), (long)(a3))
+ 
+-static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
+-                               u64 arg4) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0") = arg1;
+-  register u64 x1 asm("x1") = arg2;
+-  register u64 x2 asm("x2") = arg3;
+-  register u64 x3 asm("x3") = arg4;
++static uptr __internal_syscall(ilp32_u64 nr, ilp32_u64 arg1, long arg2, long arg3,
++                               ilp32_u64 arg4) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0") = arg1;
++  register ilp32_u64 x1 asm("x1") = arg2;
++  register ilp32_u64 x2 asm("x2") = arg3;
++  register ilp32_u64 x3 asm("x3") = arg4;
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8), "0"(x0), "r"(x1), "r"(x2), "r"(x3)
+@@ -76,16 +77,16 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
+   return x0;
+ }
+ #define __internal_syscall4(n, a1, a2, a3, a4) \
+-  (__internal_syscall)(n, (u64)(a1), (long)(a2), (long)(a3), (long)(a4))
++  (__internal_syscall)(n, (ilp32_u64)(a1), (long)(a2), (long)(a3), (long)(a4))
+ 
+-static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
+-                               u64 arg4, long arg5) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0") = arg1;
+-  register u64 x1 asm("x1") = arg2;
+-  register u64 x2 asm("x2") = arg3;
+-  register u64 x3 asm("x3") = arg4;
+-  register u64 x4 asm("x4") = arg5;
++static uptr __internal_syscall(ilp32_u64 nr, ilp32_u64 arg1, long arg2, long arg3,
++                               ilp32_u64 arg4, long arg5) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0") = arg1;
++  register ilp32_u64 x1 asm("x1") = arg2;
++  register ilp32_u64 x2 asm("x2") = arg3;
++  register ilp32_u64 x3 asm("x3") = arg4;
++  register ilp32_u64 x4 asm("x4") = arg5;
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8), "0"(x0), "r"(x1), "r"(x2), "r"(x3), "r"(x4)
+@@ -93,18 +94,18 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
+   return x0;
+ }
+ #define __internal_syscall5(n, a1, a2, a3, a4, a5) \
+-  (__internal_syscall)(n, (u64)(a1), (long)(a2), (long)(a3), (long)(a4), \
+-                       (u64)(a5))
++  (__internal_syscall)(n, (ilp32_u64)(a1), (long)(a2), (long)(a3), (long)(a4), \
++                       (ilp32_u64)(a5))
+ 
+-static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
+-                               u64 arg4, long arg5, long arg6) {
+-  register u64 x8 asm("x8") = nr;
+-  register u64 x0 asm("x0") = arg1;
+-  register u64 x1 asm("x1") = arg2;
+-  register u64 x2 asm("x2") = arg3;
+-  register u64 x3 asm("x3") = arg4;
+-  register u64 x4 asm("x4") = arg5;
+-  register u64 x5 asm("x5") = arg6;
++static uptr __internal_syscall(ilp32_u64 nr, ilp32_u64 arg1, long arg2, long arg3,
++                               ilp32_u64 arg4, long arg5, long arg6) {
++  register ilp32_u64 x8 asm("x8") = nr;
++  register ilp32_u64 x0 asm("x0") = arg1;
++  register ilp32_u64 x1 asm("x1") = arg2;
++  register ilp32_u64 x2 asm("x2") = arg3;
++  register ilp32_u64 x3 asm("x3") = arg4;
++  register ilp32_u64 x4 asm("x4") = arg5;
++  register ilp32_u64 x5 asm("x5") = arg6;
+   asm volatile("svc 0"
+                : "=r"(x0)
+                : "r"(x8), "0"(x0), "r"(x1), "r"(x2), "r"(x3), "r"(x4), "r"(x5)
+@@ -112,8 +113,8 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
+   return x0;
+ }
+ #define __internal_syscall6(n, a1, a2, a3, a4, a5, a6) \
+-  (__internal_syscall)(n, (u64)(a1), (long)(a2), (long)(a3), (long)(a4), \
+-                       (u64)(a5), (long)(a6))
++  (__internal_syscall)(n, (ilp32_u64)(a1), (long)(a2), (long)(a3), (long)(a4), \
++                       (ilp32_u64)(a5), (long)(a6))
+ 
+ #define __SYSCALL_NARGS_X(a1, a2, a3, a4, a5, a6, a7, a8, n, ...) n
+ #define __SYSCALL_NARGS(...) \
