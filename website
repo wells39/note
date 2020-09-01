@@ -1,0 +1,47 @@
+https://zhuanlan.zhihu.com/p/71564723 | 自己动手编译asan库 - 知乎
+https://www.google.com/search?q=build+ilp32+asan&rlz=1C1GCEA_enSG877SG877&oq=build+ilp32+asan&aqs=chrome..69i57j33.8926j0j7&sourceid=chrome&ie=UTF-8 | build ilp32 asan - Google Search
+https://wiki.openssl.org/index.php/Compilation_and_Installation#X32_.28ILP32.29 | Compilation and Installation - OpenSSLWiki
+https://wiki.openssl.org/index.php/Compilation_and_Installation | Compilation and Installation - OpenSSLWiki
+https://www.linuxquestions.org/questions/linux-newbie-8/warning-unknown-architecture-of-input-file-%2A%2A%2A-incompatible-with-i386-output-528958/
+https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E9%BB%98%E8%AE%A4%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC&fenlei=256&rsv_pq=d382a05e0010f118&rsv_t=617a0si%2FOcFtgG43FQzZKU8wwnGOSrHXtUtueurH56twoFji%2F9%2FuAJLnN8c&rqlang=cn&rsv_enter=1&rsv_dl=ib&rsv_sug3=22&rsv_sug1=11&rsv_sug7=100&rsv_sug2=0&rsv_btype=i&inputT=3828&rsv_sug4=3829 | 默认链接脚本_百度搜索
+http://cqwjfck.blog.chinaunix.net/uid-20680966-id-1896579.html | [原]揪出gcc默认使用的ld链接脚本-帅得不敢出门-ChinaUnix博客
+https://blog.csdn.net/tiantao2012/article/details/87005792 | 通过readelf -p .comment来检查ko编译时用到的gcc 版本_jason的笔记-CSDN博客
+https://blog.csdn.net/pwl999/article/details/81200439 | Linux perf 1.1、perf_event内核框架_pwl999的博客-CSDN博客
+https://lkml.org/lkml/2019/6/18/21 | LKML: Ravi Bangoria: [PATCH 2/5] Powerpc/hw-breakpoint: Refactor hw_breakpoint_arch_parse()
+https://kernel.googlesource.com/pub/scm/linux/kernel/git/jaegeuk/f2fs-stable/+/f67b15037a7a50c57f72e69a6d59941ad90a0f0f/kernel/events/hw_breakpoint.c | Huawei Proxy Notification
+https://blog.csdn.net/pwl999/article/details/80420905 | Linux ftrace 2.1、ftrace的使用_pwl999的博客-CSDN博客
+https://www.cnblogs.com/ggjucheng/archive/2012/01/14/2322659.html | Linux tcpdump命令详解 - ggjucheng - 博客园
+https://www.cnblogs.com/LittleHann/p/4478189.html?utm_source=tuicool | Linux Device Driver && Device File - 郑瀚Andrew.Hann - 博客园
+https://zdyxry.github.io/2020/03/18/%E7%90%86%E8%A7%A3%E7%BD%91%E5%8D%A1%E6%B7%B7%E6%9D%82%E6%A8%A1%E5%BC%8F/ | 理解网卡混杂模式 | Yiran's Blog
+https://www.cnblogs.com/cposture/p/9029043.html | [翻译] GCC 内联汇编 HOWTO - cposture - 博客园
+https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html | Extended Asm (Using the GNU Compiler Collection (GCC))
+https://stackoverflow.com/questions/8045108/use-label-in-assembly-from-c | gcc - Use label in assembly from C - Stack Overflow
+https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E5%86%85%E6%A0%B8%E6%AE%B5%E8%A1%A8&fenlei=256&oq=%25E5%2586%2585%25E6%25A0%25B8%25E6%2580%2581%25E6%25AE%25B5%25E8%25A1%25A8&rsv_pq=f1af125b001c5f95&rsv_t=32b3c4s8BMTJnX1wQnIS0kZyF8k%2FZ9VPjGslsxvDrpjSntAZTANj6xwrOUk&rqlang=cn&rsv_enter=1&rsv_dl=tb&rsv_btype=t&inputT=252&rsv_sug3=64&rsv_sug1=25&rsv_sug7=000&rsv_sug2=0&rsv_sug4=1069&rsv_sug=1 | 内核段表_百度搜索
+https://blog.csdn.net/fyzhao/article/details/10383907 | Arm Linux 内核页表的段式映射_-第二月-的专栏-CSDN博客
+https://blog.csdn.net/qq_21792169/article/details/107401688#_Toc199836823 | 以太网PHY寄存器分析_Herok-CSDN博客
+https://www.cnblogs.com/LoyenWang/p/12116570.html | 【原创】（十四）Linux内存管理之page fault处理 - LoyenWang - 博客园
+https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BB%A5%E5%A4%AA%E7%BD%91%E5%B8%A7vlan&fenlei=256&oq=%25E4%25BB%25A5%25E5%25A4%25AA%25E7%25BD%2591%25E5%25B8%25A7&rsv_pq=8e80b07700001476&rsv_t=743f3tTRXBRalz3AdO3CMtw034ItsQueU0V3nCJpRzB6c34QhBjOebreLdQ&rqlang=cn&rsv_enter=1&rsv_dl=tb&rsv_btype=t&inputT=1454&rsv_sug3=20&rsv_sug1=11&rsv_sug7=100&rsv_sug2=0&rsv_sug4=2390 | 以太网帧vlan_百度搜索
+http://www.docin.com/p-1662870043.html | 以太网帧结构及VLAN技术 - 豆丁网
+https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=phy%20mdi%E6%8E%A5%E5%8F%A3&fenlei=256&rsv_pq=9ec31d93000e4110&rsv_t=ccd3J7YfmS8s28oojpta%2F1zJm7j2YCBUX6A8rT2%2BYswr4RTD0vgC5c4jw%2F0&rqlang=cn&rsv_enter=1&rsv_dl=ib&rsv_sug3=14&rsv_sug1=10&rsv_sug7=100&rsv_sug2=0&rsv_btype=i&inputT=4870&rsv_sug4=4870 | phy mdi接口_百度搜索
+http://blog.sina.com.cn/s/blog_9fa828d10102y6tk.html | PHY——与PHY之间的接口协议_一博科技_新浪博客
+https://www.cnblogs.com/olajennings/p/6662925.html | ld: i386 架构于输入文件foo.o 与 i386:x86-64 输出不兼容 - jenningszheng - 博客园
+https://www.google.com/search?rlz=1C1GCEA_enSG877SG877&ei=k3MuX63oNIri-AaT-rvIAQ&q=arm+VMID&oq=arm+VMID&gs_lcp=CgZwc3ktYWIQAzICCAAyBggAEBYQHjoHCCEQChCgAToFCAAQkQI6BAgAEEM6BAgAEAo6CAgAEBYQChAeOgUIIRCgAVDSFVivMWCbM2gCcAB4AIABW4gBmwSSAQE3mAEAoAEBqgEHZ3dzLXdpesABAQ&sclient=psy-ab&ved=0ahUKEwjt_cvYqIvrAhUKMd4KHRP9DhkQ4dUDCAw&uact=5 | arm VMID - Google Search
+https://www.google.com/search?q=arm+asid&rlz=1C1GCEA_enSG877SG877&oq=arm+asid&aqs=chrome..69i57j0l4j69i61j69i60j69i61.3715j0j4&sourceid=chrome&ie=UTF-8 | arm asid - Google Search
+https://community.arm.com/developer/ip-products/processors/f/cortex-a-forum/5229/address-space-identifier---asid | Address Space Identifier - ASID - Cortex-A / A-Profile forum - Processors - Arm Community
+https://stackoverflow.com/questions/42768470/why-are-asid-only-in-the-tlb-in-armv8-a-how-to-avoid-unauthorized-access-to-mem | operating system - Why are ASID only in the TLB in ARMv8-A? How to avoid unauthorized access to memory present in tables but ejected from TLB? - Stack Overflow
+https://stackoverflow.com/questions/17590146/how-to-deal-the-circumstance-of-asids-are-used-up-in-linux-kernel | How to deal the circumstance of ASIDs are used up in Linux kernel？ - Stack Overflow
+https://stackoverflow.com/questions/44739789/in-armv8-what-happens-if-a-global-page-table-entry-conflict-across-different-pr | memory management - In ARMv8, what happens if a global page table entry conflict across different processes? - Stack Overflow
+https://github.com/apple/cups/issues/5106 | Building with Clang 3.8 and GCC 7.2.0 installed fails with: error: unknown type name '__float128' · Issue #5106 · apple/cups
+https://chromium.googlesource.com/native_client/nacl-gcc/+/ng/master/libsanitizer/sanitizer_common/sanitizer_linux.cc 
+https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=asan%E7%9A%84shadow%E5%86%85%E5%AD%98&fenlei=256&oq=asan%25E7%259A%2584shadow%25E5%2586%2585%25E5%25AD%2598&rsv_pq=9d7d7cdc000176d3&rsv_t=c293Ahrc1cVskoxXreswx4npMaeR9ZY%2Fv9yBc3%2BdqjHFCFxWrJVk3RBY3Ng&rqlang=cn&rsv_enter=1&rsv_dl=tb&rsv_btype=t&inputT=459&rsv_sug3=53&rsv_sug1=36&rsv_sug7=000&rsv_sug2=0&rsv_sug4=1093&rsv_sug=1 | asan的shadow内存_百度搜索
+https://blog.csdn.net/wads23456/article/details/104836179/ | 【C/C++内存问题检测工具】 AddressSanitizer（Asan）介绍与分析_勤学如春起之苗，不见其增，日有所长！ 辍学如磨刀之石，不见其损，日有所亏！-CSDN博客
+https://www.cnblogs.com/super-king/p/3296333.html | proc 文件系统调节参数介绍 - SuperKing - 博客园
+https://www.google.com/search?q=xterm+kDN6&rlz=1C1GCEA_enSG877SG877&oq=xterm+kDN6&aqs=chrome..69i57.4580j0j4&sourceid=chrome&ie=UTF-8 | xterm kDN6 - Google Search
+https://superuser.com/questions/1536450/why-is-tmux-not-recognizing-ctrlshiftarrow-through-mobaxterm | ssh - Why is tmux not recognizing ctrl+shift+arrow through MobaXterm? - Super User
+https://www.google.com/search?q=putty+cannot+send+ctrl%2Bup&rlz=1C1GCEA_enSG877SG877&oq=putty+cannot+send+ctrl%2Bup&aqs=chrome..69i57.21540j0j7&sourceid=chrome&ie=UTF-8 | putty cannot send ctrl+up - Google Search
+https://code.google.com/archive/p/mintty/wikis/Keycodes.wiki#Cursor_keys | Google Code Archive - Long-term storage for Google Code Project Hosting.
+https://stackoverflow.com/questions/28863938/enable-mouse-scrolling-but-not-mouse-visual-selection-in-vim | iterm2 - enable mouse scrolling but not mouse visual selection in vim? - Stack Overflow
+https://patches.linaro.org/patch/129368/ | Add sanitizer support for AArch64 ILP32 - Patchwork
+https://reviews.llvm.org/D40134 | ⚙ D40134 [asan] Add support for AArch64 ILP32
+https://gcc.gnu.org/pipermail/gcc-patches/2013-December/author.html | The Gcc-patches December 2013 Archive by author
+https://blog.csdn.net/zhangskd/article/details/21627963 | 数据包接收系列 — NAPI的原理和实现_zhangskd的专栏-CSDN博客
